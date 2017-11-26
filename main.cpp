@@ -108,7 +108,8 @@ void test_hiredis(){
 }
 
 void test_redisclient(){
-    redisclient::redis_client client;
+
+    redisclient::redis_client client; //just support numeric and string
 
     bool r = client.connect("127.0.0.1", 6379);
 

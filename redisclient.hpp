@@ -86,10 +86,11 @@ namespace redisclient{
             if(reply== nullptr)
                 return false;
 
+            guard_reply guard(reply);
             if (!(reply->type == REDIS_REPLY_STATUS && strcasecmp(reply->str,"OK") == 0)){
                 return false;
             }
-            freeReplyObject(reply);
+
             return true;
         }
 
