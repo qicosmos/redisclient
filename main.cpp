@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include <hiredis.h>
+#include "redisclient.hpp"
 
 enum class type_t
 {
@@ -75,6 +76,11 @@ void test_hiredis(){
     check(reply);
     freeReplyObject(reply);
 
+    reply = (redisReply *)redisCommand(c,"SET %s %d", "foo", 2345);
+    printf("SET: %s\n", reply->str);
+    check(reply);
+    freeReplyObject(reply);
+
     /* Set a key using binary safe API */
     reply = (redisReply *)redisCommand(c,"SET %b %b", "bar", (size_t) 3, "hello", (size_t) 5);
     printf("SET (binary API): %s\n", reply->str);
@@ -82,7 +88,8 @@ void test_hiredis(){
     freeReplyObject(reply);
 
     /* Try a GET */
-    reply = (redisReply *)redisCommand(c,"GET foo");
+    std::string str = "GET ";str+="foo";
+    reply = (redisReply *)redisCommand(c, str.data());
     printf("GET foo: %s\n", reply->str);
     check(reply);
     freeReplyObject(reply);
