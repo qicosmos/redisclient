@@ -10,27 +10,27 @@
 #include <inttypes.h>
 #include <hiredis.h>
 using namespace std::string_literals;
-
-namespace detail{
-    template<typename T>
-    constexpr bool  is_int64_v = std::is_same_v<T, std::int64_t>;
-
-    template<typename T>
-    constexpr bool  is_uint64_v = std::is_same_v<T, std::uint64_t>;
-
-    template<typename T>
-    constexpr bool  is_64_v = std::is_same_v<T, std::int64_t>||std::is_same_v<T, std::uint64_t>;
-
-    template<typename T>
-    constexpr bool  is_string_v = std::is_same_v<T, std::string>;
-
-    template<typename T>
-    constexpr bool  is_cstr_v = std::is_same_v<T, const char*>;
-
-    template<typename T>
-    constexpr bool  is_char_array_v = std::is_array_v<T>&&std::is_same_v<std::remove_reference_t<decltype(*std::declval<T>())>, char>;
-}
 namespace redisclient{
+    namespace detail{
+        template<typename T>
+        constexpr bool  is_int64_v = std::is_same_v<T, std::int64_t>;
+
+        template<typename T>
+        constexpr bool  is_uint64_v = std::is_same_v<T, std::uint64_t>;
+
+        template<typename T>
+        constexpr bool  is_64_v = std::is_same_v<T, std::int64_t>||std::is_same_v<T, std::uint64_t>;
+
+        template<typename T>
+        constexpr bool  is_string_v = std::is_same_v<T, std::string>;
+
+        template<typename T>
+        constexpr bool  is_cstr_v = std::is_same_v<T, const char*>;
+
+        template<typename T>
+        constexpr bool  is_char_array_v = std::is_array_v<T>&&std::is_same_v<std::remove_reference_t<decltype(*std::declval<T>())>, char>;
+    }
+
     class redis_client{
     public:
         bool connect(const std::string& hostname, int port, int timeout=3){
@@ -93,8 +93,6 @@ namespace redisclient{
             return true;
         }
 
-        //blob
-
         template<typename T>
         T get(const std::string& key){
             using U = std::remove_const_t<std::remove_reference_t<T>>;
@@ -103,6 +101,10 @@ namespace redisclient{
 
             if(reply== nullptr){
                 throw(std::invalid_argument("redisCommand failed"));
+            }
+
+            if(reply->str== nullptr){
+                throw(std::invalid_argument("no value"));
             }
 
             guard_reply guard(reply);
@@ -116,10 +118,9 @@ namespace redisclient{
                 return std::atoll(reply->str);
             }
             else if constexpr(detail::is_string_v<U>){
-                reply->str;
+                return reply->str;
             }else{
                 std::cout<<"don't support the type now"<<std::endl;
-                freeReplyObject(reply);
                 throw(std::invalid_argument("don't support the type now"));
             }
         }
@@ -131,9 +132,8 @@ namespace redisclient{
             if(reply== nullptr)
                 return false;
 
-            bool b = reply->integer>0;
-            freeReplyObject(reply);
-            return b;
+            guard_reply guard(reply);
+            return reply->integer>0;
         }
 
     private:

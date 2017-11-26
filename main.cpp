@@ -116,13 +116,20 @@ void test_redisclient(){
     r = client.set("b", 2.5);
     r = client.set("c", "test");
 
-    auto result1 = client.get<int>("a");
-    auto result2 = client.get<double>("a");
-    auto result3 = client.get<std::string>("a");
+    try {
+        auto result1 = client.get<int>("a");
+        auto result2 = client.get<double>("b");
+        auto result3 = client.get<std::string>("c");
 
-    r = client.del("a");
-    r = client.del("b");
-    r = client.del("c");
+        r = client.del("a");
+        r = client.del("b");
+        r = client.del("c");
+
+        auto result4 = client.get<int>("a");
+        auto result5 = client.get<double>("b");
+    }catch(const std::exception& e){
+        std::cout<<e.what()<<std::endl;
+    }
 }
 
 int main(){
