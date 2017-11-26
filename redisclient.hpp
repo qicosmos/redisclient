@@ -132,7 +132,6 @@ namespace redisclient{
         }
 
         bool del(const std::string& key){
-            std::string cmd = "DEL "s + key;
             redisReply *reply = (redisReply *)redisCommand(con_, "DEL %b", key.data(), key.size());
 
             if(reply== nullptr)
