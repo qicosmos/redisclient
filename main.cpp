@@ -107,7 +107,26 @@ void test_hiredis(){
     redisFree(c);
 }
 
+void test_redisclient(){
+    redisclient::redis_client client;
+
+    bool r = client.connect("127.0.0.1", 6379);
+
+    r = client.set("a", 10);
+    r = client.set("b", 2.5);
+    r = client.set("c", "test");
+
+    auto result1 = client.get<int>("a");
+    auto result2 = client.get<double>("a");
+    auto result3 = client.get<std::string>("a");
+
+    r = client.del("a");
+    r = client.del("b");
+    r = client.del("c");
+}
+
 int main(){
+    test_redisclient();
     test_hiredis();
 
     return 0;

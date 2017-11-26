@@ -9,12 +9,8 @@
 #include <iostream>
 #include <inttypes.h>
 #include <hiredis.h>
-/*
- * reply = (redisReply *)redisCommand(c,"SET %s %s", "foo", "hello world");
-    printf("SET: %s\n", reply->str);
-    check(reply);
-    freeReplyObject(reply);
- */
+using namespace std::string_literals;
+
 namespace detail{
     template<typename T>
     constexpr bool  is_int64_v = std::is_same_v<T, std::int64_t>;
@@ -30,6 +26,9 @@ namespace detail{
 
     template<typename T>
     constexpr bool  is_cstr_v = std::is_same_v<T, const char*>;
+
+    template<typename T>
+    constexpr bool  is_char_array_v = std::is_array_v<T>&&std::is_same_v<std::remove_reference_t<decltype(*std::declval<T>())>, char>;
 }
 namespace redisclient{
     class redis_client{
@@ -69,7 +68,7 @@ namespace redisclient{
             else if constexpr(detail::is_string_v<U>){
                 reply = (redisReply *)redisCommand(con_,"SET %s %s", key.data(), std::forward<T>(val).data());
             }
-            else if constexpr(detail::is_cstr_v<U>){
+            else if constexpr(detail::is_cstr_v<U>||detail::is_char_array_v<U>){
                 reply = (redisReply *)redisCommand(con_,"SET %s %s", key.data(), std::forward<T>(val));
             }
             else if constexpr(detail::is_int64_v<U>){
@@ -94,27 +93,38 @@ namespace redisclient{
             return true;
         }
 
-//        template<typename T>
-        std::string get(const std::string& key){
-            using namespace std::string_literals;
-//            using U = std::remove_const_t<std::remove_reference_t<T>>;
+        //blob
+
+        template<typename T>
+        T get(const std::string& key){
+            using U = std::remove_const_t<std::remove_reference_t<T>>;
             std::string cmd = "GET "s + key;
             redisReply *reply = (redisReply *)redisCommand(con_, cmd.data());
-            std::string str = reply->str;
-            freeReplyObject(reply);
-            return str;
-//            if constexpr(std::is_arithmetic_v<U>){
-//                reply = (redisReply *)redisCommand(con_, cmd.data());
-//            }
-//            else if constexpr(detail::is_string_v<U>){
-//                reply = (redisReply *)redisCommand(con_, cmd.data());
-//            }
-//            return T{};
+
+            if(reply== nullptr){
+                throw(std::invalid_argument("redisCommand failed"));
+            }
+
+            guard_reply guard(reply);
+            if constexpr(std::is_integral_v<U>&&!detail::is_64_v<U>){
+                return std::atoi(reply->str);
+            }
+            else if constexpr(std::is_floating_point_v<U>){
+                return std::atof(reply->str);
+            }
+            else if constexpr(detail::is_64_v<U>){
+                return std::atoll(reply->str);
+            }
+            else if constexpr(detail::is_string_v<U>){
+                reply->str;
+            }else{
+                std::cout<<"don't support the type now"<<std::endl;
+                freeReplyObject(reply);
+                throw(std::invalid_argument("don't support the type now"));
+            }
         }
 
         bool del(const std::string& key){
-            using namespace std::string_literals;
-//            using U = std::remove_const_t<std::remove_reference_t<T>>;
             std::string cmd = "DEL "s + key;
             redisReply *reply = (redisReply *)redisCommand(con_, cmd.data());
 
@@ -127,6 +137,17 @@ namespace redisclient{
         }
 
     private:
+        struct guard_reply{
+            guard_reply(redisReply *reply):reply_(reply){}
+            ~guard_reply(){
+                if(reply_!= nullptr)
+                    freeReplyObject(reply_);
+            }
+
+        private:
+            redisReply *reply_ = nullptr;
+        };
+
         redisContext *con_ = nullptr;
     };
 }
