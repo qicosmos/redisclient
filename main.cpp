@@ -110,24 +110,28 @@ void test_hiredis(){
 void test_redisclient(){
 
     redisclient::redis_client client; //just support numeric and string
-
     bool r = client.connect("127.0.0.1", 6379);
 
     r = client.set("a", 10);
     r = client.set("b", 2.5);
     r = client.set("c", "test");
 
+    std::string key("a\0 a", 4);
+    std::string val("a\0 a\0a", 6);
+    r = client.set(key, val);
     try {
         auto result1 = client.get<int>("a");
         auto result2 = client.get<double>("b");
         auto result3 = client.get<std::string>("c");
-
+        auto result0 = client.get<std::string>(key);
         r = client.del("a");
         r = client.del("b");
         r = client.del("c");
+        r = client.del(key);
 
         auto result4 = client.get<int>("a");
         auto result5 = client.get<double>("b");
+        auto result6 = client.get<std::string>(key);
     }catch(const std::exception& e){
         std::cout<<e.what()<<std::endl;
     }

@@ -60,22 +60,28 @@ namespace redisclient{
             using U = std::remove_const_t<std::remove_reference_t<T>>;
             redisReply *reply = nullptr;
             if constexpr(std::is_integral_v<U>&&!detail::is_64_v<U>){
-                reply = (redisReply *)redisCommand(con_,"SET %s %d", key.data(), std::forward<T>(val));
+                reply = (redisReply *)redisCommand(con_,"SET %b %d", key.data(), key.size(), std::forward<T>(val));
             }
             else if constexpr(std::is_floating_point_v<U>){
-                reply = (redisReply *)redisCommand(con_,"SET %s %f", key.data(), std::forward<T>(val));
+                reply = (redisReply *)redisCommand(con_,"SET %b %f", key.data(), key.size(), std::forward<T>(val));
             }
             else if constexpr(detail::is_string_v<U>){
-                reply = (redisReply *)redisCommand(con_,"SET %s %s", key.data(), std::forward<T>(val).data());
+                reply = (redisReply *)redisCommand(con_,"SET %b %b", key.data(), key.size(),
+                                                   std::forward<T>(val).data(), std::forward<T>(val).size());
             }
-            else if constexpr(detail::is_cstr_v<U>||detail::is_char_array_v<U>){
-                reply = (redisReply *)redisCommand(con_,"SET %s %s", key.data(), std::forward<T>(val));
+            else if constexpr(detail::is_cstr_v<U>){
+                reply = (redisReply *)redisCommand(con_,"SET %b %b", key.data(), key.size(),
+                                                   std::forward<T>(val), strlen(std::forward<T>(val)));
+            }
+            else if constexpr(detail::is_char_array_v<U>){
+                reply = (redisReply *)redisCommand(con_,"SET %b %b", key.data(), key.size(),
+                                                   std::forward<T>(val), sizeof(std::forward<T>(val)));
             }
             else if constexpr(detail::is_int64_v<U>){
-                reply = (redisReply *)redisCommand(con_,"SET %s ""%" PRId64, key.data(), std::forward<T>(val));
+                reply = (redisReply *)redisCommand(con_,"SET %b ""%" PRId64, key.data(), key.size(), std::forward<T>(val));
             }
             else if constexpr(detail::is_uint64_v<U>){
-                reply = (redisReply *)redisCommand(con_,"SET %s ""%" PRIu64, key.data(), std::forward<T>(val));
+                reply = (redisReply *)redisCommand(con_,"SET %b ""%" PRIu64, key.data(), key.size(), std::forward<T>(val));
             }
             else{
                 std::cout<<"don't support the type now"<<std::endl;
@@ -97,8 +103,7 @@ namespace redisclient{
         template<typename T>
         T get(const std::string& key){
             using U = std::remove_const_t<std::remove_reference_t<T>>;
-            std::string cmd = "GET "s + key;
-            redisReply *reply = (redisReply *)redisCommand(con_, cmd.data());
+            redisReply *reply = (redisReply *)redisCommand(con_, "GET %b", key.data(), key.size());
 
             if(reply== nullptr){
                 throw(std::invalid_argument("redisCommand failed"));
@@ -119,7 +124,7 @@ namespace redisclient{
                 return std::atoll(reply->str);
             }
             else if constexpr(detail::is_string_v<U>){
-                return reply->str;
+                return std::string(reply->str, reply->len);
             }else{
                 std::cout<<"don't support the type now"<<std::endl;
                 throw(std::invalid_argument("don't support the type now"));
@@ -128,7 +133,7 @@ namespace redisclient{
 
         bool del(const std::string& key){
             std::string cmd = "DEL "s + key;
-            redisReply *reply = (redisReply *)redisCommand(con_, cmd.data());
+            redisReply *reply = (redisReply *)redisCommand(con_, "DEL %b", key.data(), key.size());
 
             if(reply== nullptr)
                 return false;
