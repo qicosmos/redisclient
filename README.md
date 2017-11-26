@@ -1,7 +1,7 @@
 # redisclient
 A c++17 simple redis client
 
-## quick exaample
+## quick example
 
     redisclient::redis_client client; //just support numeric and string
 
