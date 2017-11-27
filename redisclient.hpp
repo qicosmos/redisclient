@@ -9,7 +9,7 @@
 #include <iostream>
 #include <inttypes.h>
 #include <hiredis.h>
-using namespace std::string_literals;
+
 namespace redisclient{
     namespace detail{
         template<typename T>
@@ -109,11 +109,11 @@ namespace redisclient{
                 throw(std::invalid_argument("redisCommand failed"));
             }
 
+            guard_reply guard(reply);
             if(reply->str== nullptr){
                 throw(std::invalid_argument("no value"));
             }
 
-            guard_reply guard(reply);
             if constexpr(std::is_integral_v<U>&&!detail::is_64_v<U>){
                 return std::atoi(reply->str);
             }
