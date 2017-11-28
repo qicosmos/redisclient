@@ -124,11 +124,13 @@ void test_redisclient(){
         auto result2 = client.get<double>("b");
         auto result3 = client.get<std::string>("c");
         auto result0 = client.get<std::string>(key);
+
+        auto v = client.keys("*");
         r = client.del("a");
         r = client.del("b");
         r = client.del("c");
         r = client.del(key);
-
+        auto v1 = client.keys("*");
         auto result4 = client.get<int>("a");
         auto result5 = client.get<double>("b");
         auto result6 = client.get<std::string>(key);

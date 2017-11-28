@@ -9,6 +9,7 @@
 #include <iostream>
 #include <inttypes.h>
 #include <hiredis.h>
+#include <vector>
 
 namespace redisclient{
     namespace detail{
@@ -139,6 +140,25 @@ namespace redisclient{
 
             guard_reply guard(reply);
             return reply->integer>0;
+        }
+
+        std::vector<std::string> keys(const std::string& key){
+            redisReply *reply = (redisReply *)redisCommand(con_, "KEYS %b", key.data(), key.size());
+
+            if(reply== nullptr)
+                return {};
+
+            guard_reply guard(reply);
+            if(reply->elements==0)
+                return {};
+
+            std::vector<std::string> v;
+            for (size_t i = 0; i < reply->elements; ++i) {
+                redisReply *item = reply->element[i];
+                v.push_back(std::string(item->str, item->len));
+            }
+
+            return v;
         }
 
     private:
